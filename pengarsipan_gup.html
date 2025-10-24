@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pengarsipan Input GUP</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f2f4f7; margin: 0; padding: 0; }
+  header { background: #004aad; color: white; padding: 15px; text-align: center; font-size: 22px; }
+  main { padding: 20px; max-width: 900px; margin: auto; background: white; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+  form { margin-bottom: 20px; }
+  label { display: block; margin-top: 10px; font-weight: bold; }
+  input, textarea { width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; }
+  button { background: #004aad; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+  button:hover { background: #003580; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+  th { background: #004aad; color: white; }
+  tr:nth-child(even) { background: #f9f9f9; }
+  .action-btn { background: #ffb400; margin-right: 5px; }
+  .delete-btn { background: #d32f2f; }
+  #login-page { display: none; text-align: center; padding: 50px; }
+  #dashboard { display: none; }
+  #stats { display: flex; justify-content: space-around; margin-bottom: 20px; }
+  .stat-box { background: #004aad; color: white; padding: 15px; border-radius: 8px; width: 45%; text-align: center; }
+</style>
+</head>
+<body>
+
+<header>📁 Pengarsipan Input GUP</header>
+
+<div id="login-page">
+  <h2>Login Admin</h2>
+  <input type="password" id="password" placeholder="Masukkan password">
+  <button onclick="login()">Login</button>
+</div>
+
+<main id="dashboard">
+  <div id="stats">
+    <div class="stat-box"><h3 id="totalGUP">0</h3><p>Total Data GUP</p></div>
+    <div class="stat-box"><h3 id="totalNominal">Rp 0</h3><p>Total Uang</p></div>
+  </div>
+
+  <form id="gupForm">
+    <h2>Input Data GUP</h2>
+    <label>Nomor GUP:</label>
+    <input type="text" id="noGUP" required>
+    <label>Tanggal:</label>
+    <input type="date" id="tanggal" required>
+    <label>Jumlah (Rp):</label>
+    <input type="number" id="jumlah" required>
+    <label>Keterangan:</label>
+    <textarea id="keterangan" rows="3"></textarea>
+    <label>Lampiran (PDF/JPG):</label>
+    <input type="file" id="file">
+    <button type="submit">Simpan</button>
+  </form>
+
+  <h2>Data Arsip GUP</h2>
+  <input type="text" id="search" placeholder="Cari Nomor atau Keterangan..." onkeyup="searchData()">
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Nomor GUP</th>
+        <th>Tanggal</th>
+        <th>Jumlah</th>
+        <th>Keterangan</th>
+        <th>Lampiran</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</main>
+
+<script>
+let dataGUP = JSON.parse(localStorage.getItem("dataGUP")) || [];
+
+function renderTable() {
+  const tbody = document.querySelector("#dataTable tbody");
+  tbody.innerHTML = "";
+  let totalNominal = 0;
+  dataGUP.forEach((d, i) => {
+    totalNominal += parseInt(d.jumlah);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td>${d.noGUP}</td>
+      <td>${d.tanggal}</td>
+      <td>Rp ${parseInt(d.jumlah).toLocaleString()}</td>
+      <td>${d.keterangan}</td>
+      <td>${d.fileName ? `<a href="${d.fileURL}" target="_blank">Lihat</a>` : '-'}</td>
+      <td>
+        <button class="action-btn" onclick="editData(${i})">Edit</button>
+        <button class="delete-btn" onclick="deleteData(${i})">Hapus</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById("totalGUP").innerText = dataGUP.length;
+  document.getElementById("totalNominal").innerText = "Rp " + totalNominal.toLocaleString();
+}
+
+document.getElementById("gupForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const noGUP = document.getElementById("noGUP").value;
+  const tanggal = document.getElementById("tanggal").value;
+  const jumlah = document.getElementById("jumlah").value;
+  const keterangan = document.getElementById("keterangan").value;
+  const fileInput = document.getElementById("file");
+  let fileName = "", fileURL = "";
+  if (fileInput.files.length > 0) {
+    fileName = fileInput.files[0].name;
+    fileURL = URL.createObjectURL(fileInput.files[0]);
+  }
+
+  dataGUP.push({ noGUP, tanggal, jumlah, keterangan, fileName, fileURL });
+  localStorage.setItem("dataGUP", JSON.stringify(dataGUP));
+  renderTable();
+  e.target.reset();
+});
+
+function editData(index) {
+  const d = dataGUP[index];
+  document.getElementById("noGUP").value = d.noGUP;
+  document.getElementById("tanggal").value = d.tanggal;
+  document.getElementById("jumlah").value = d.jumlah;
+  document.getElementById("keterangan").value = d.keterangan;
+  deleteData(index);
+}
+
+function deleteData(index) {
+  if (confirm("Hapus data ini?")) {
+    dataGUP.splice(index, 1);
+    localStorage.setItem("dataGUP", JSON.stringify(dataGUP));
+    renderTable();
+  }
+}
+
+function searchData() {
+  const keyword = document.getElementById("search").value.toLowerCase();
+  const rows = document.querySelectorAll("#dataTable tbody tr");
+  rows.forEach(row => {
+    const text = row.innerText.toLowerCase();
+    row.style.display = text.includes(keyword) ? "" : "none";
+  });
+}
+
+function login() {
+  const pass = document.getElementById("password").value;
+  if (pass === "admin123") {
+    document.getElementById("login-page").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    renderTable();
+  } else {
+    alert("Password salah!");
+  }
+}
+
+document.getElementById("login-page").style.display = "block";
+</script>
+
+</body>
+</html>
